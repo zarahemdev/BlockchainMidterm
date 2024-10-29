@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Rays</title>
+    <style>
+        body {
+            background-color: #fff7e6;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            color: #f39c12;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border: none;
+            background-color: #f39c12;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Help Grow a Flower</h1>
+        <button onclick="buyRay()">Buy a Ray</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script>
+        const rayContractAddress = '0x998dF6013C5EeE4f9266Dc68c75475397d2113e1'; // Updated Ray contract address
+
+        // Initialize ethers.js provider and signer
+        async function initEthers() {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            return new ethers.Contract(rayContractAddress, rayAbi, signer);
+        }
+
+        // ABI for Ray contract
+        const rayAbi = [
+            "function buyRay() public",
+            "event RayPurchased(address buyer, uint256 totalRayCount)"
+        ];
+
+        async function buyRay() {
+            try {
+                const rayContract = await initEthers();
+                await rayContract.buyRay(); // Call smart contract's buyRay function
+                alert("Ray purchased! The flower is growing.");
+            } catch (error) {
+                console.error("Error purchasing ray:", error);
+                alert("Error buying ray. Please try again.");
+            }
+        }
+    </script>
+</body>
+</html>

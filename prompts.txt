@@ -1,0 +1,302 @@
+I have two webpages called flower.html and ray.html that interact with two smart contracts called flower.sol and ray.sol
+
+here's the code for ray.sol:
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "./Flower.sol";
+
+contract Ray {
+
+    Flower public flowerContract;
+    uint256 public rayCount; // total number of rays bought globally
+    address public owner;
+
+    event RayPurchased(address indexed buyer, uint256 totalRayCount);
+
+    constructor(address _flowerContract) {
+        flowerContract = Flower(_flowerContract);
+        owner = msg.sender;
+    }
+
+    // Function to buy rays and contribute to the global flower growth
+    function buyRay() public {
+        // Increment the global ray count
+        rayCount++;
+
+        // Notify the flower contract that a new ray has been added
+        flowerContract.growFlower();
+
+        emit RayPurchased(msg.sender, rayCount);
+    }
+}
+
+Here's the code for flower.sol:
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+contract Flower {
+    using SafeMath for uint256;
+
+    struct FlowerStruct {
+        uint256 x;
+        uint256 y;
+    }
+
+    uint256 public totalFlowersGrown; // Total number of flowers fully grown
+    uint256 public currentRayCount;   // Tracks the rays contributed to the current flower
+    mapping(uint256 => FlowerStruct) public flowers; // Mapping of flower ID to flower details
+
+    event FlowerGrown(uint256 flowerId, uint256 x, uint256 y);
+
+    constructor() {
+        totalFlowersGrown = 0;
+        currentRayCount = 0;
+    }
+
+    // Function to grow the current flower based on ray count
+    function growFlower() public {
+        currentRayCount++;
+
+        // If the current flower has received 3 rays, it is fully grown
+        if (currentRayCount >= 3) {
+            _growNewFlower();
+            currentRayCount = 0;
+        }
+    }
+
+    // Internal function to handle growing a new flower
+    function _growNewFlower() internal {
+        uint256 x = _generateRandomCoordinate(10, 90, 0);
+        uint256 y = _generateRandomCoordinate(10, 90, 1);
+
+        // Ensure the flower does not overlap by checking existing coordinates
+        while (_flowerExistsAt(x, y)) {
+            x = _generateRandomCoordinate(10, 90, 0);
+            y = _generateRandomCoordinate(10, 90, 1);
+        }
+
+        // Increment the total flowers grown and store the new flower
+        totalFlowersGrown++;
+        flowers[totalFlowersGrown] = FlowerStruct(x, y);
+
+        emit FlowerGrown(totalFlowersGrown, x, y);
+    }
+
+    // Function to check if a flower already exists at the given coordinates
+    function _flowerExistsAt(uint256 x, uint256 y) internal view returns (bool) {
+        for (uint256 i = 1; i <= totalFlowersGrown; i++) {
+            if (flowers[i].x == x && flowers[i].y == y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Function to generate random coordinates within the specified range
+    function _generateRandomCoordinate(uint256 min, uint256 max, uint256 seed) internal view returns (uint256) {
+        uint256 range = max - min + 1;
+        uint256 rand = uint256(keccak256(abi.encodePacked(block.timestamp + seed, block.prevrandao, msg.sender))) % range;
+        return rand + min;
+    }
+}
+
+here's a template for how the flower.html page should be:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowers</title>
+    <style>
+        body {
+            background-color: #f8f0e6;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            color: #4b5320;
+            position: relative;
+        }
+        .container {
+            margin-top: 50px;
+            position: relative;
+            width: 100%;
+            height: 500px;
+        }
+        h1 {
+            font-size: 2.5em;
+        }
+        .flower {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border: none;
+            background-color: #74c69d;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #52b788;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Watch Your Flower Grow</h1>
+        <div id="flowerContainer"></div> <!-- Container for growing flowers -->
+        <button onclick="growFlower()">Grow Flower</button>
+    </div>
+
+    <script>
+        let rayCount = 0;
+        let permanentStage = false; // Tracks if the current flower is in its final permanent stage
+        let flowersGrown = 0; // Track how many flowers have been grown so far
+        const flowerContainer = document.getElementById('flowerContainer');
+
+        async function growFlower() {
+            if (permanentStage) {
+                alert("This flower is permanent! A new flower will grow in a different location.");
+                return;
+            }
+
+            // Simulate getting the current ray count from the blockchain
+            rayCount = await getRayCount();
+
+            if (rayCount == 1) {
+                growNewFlower('FlowerPhaseOne.png');
+            } else if (rayCount == 2) {
+                updateFlowerImage('FlowerPhaseTwo.png');
+            } else if (rayCount == 3) {
+                updateFlowerImage('FlowerPhaseThree.png');
+                permanentStage = true; // Mark the flower as fully grown and permanent
+            } else if (rayCount > 3) {
+                alert("A new flower cycle will begin with a different position.");
+                flowersGrown++;
+                resetFlowerCycle();
+            }
+        }
+
+        function growNewFlower(imageSrc) {
+            const newFlower = document.createElement('img');
+            newFlower.src = imageSrc;
+            newFlower.className = 'flower';
+            newFlower.id = 'flowerImage-' + flowersGrown;
+
+            // Generate random x and y positions for the flower
+            const { x, y } = generateRandomCoordinates();
+            newFlower.style.left = `${x}px`;
+            newFlower.style.top = `${y}px`;
+
+            flowerContainer.appendChild(newFlower);
+        }
+
+        function updateFlowerImage(imageSrc) {
+            const currentFlower = document.getElementById('flowerImage-' + flowersGrown);
+            if (currentFlower) {
+                currentFlower.src = imageSrc;
+            }
+        }
+
+        function resetFlowerCycle() {
+            permanentStage = false; // Reset the permanent stage flag for the new cycle
+            rayCount = 0; // Reset ray count for the new flower cycle
+        }
+
+        function generateRandomCoordinates() {
+            const maxX = window.innerWidth - 150; // Limit so flower doesn't go off-screen
+            const maxY = 400; // Limit vertical space to container height
+
+            const x = Math.floor(Math.random() * maxX);
+            const y = Math.floor(Math.random() * maxY);
+
+            return { x, y };
+        }
+
+        // Placeholder function to simulate getting ray count from the blockchain
+        function getRayCount() {
+            return new Promise((resolve) => {
+                setTimeout(() => resolve(rayCount + 1), 1000); // Simulate ray increment for demo
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+here's a template for the ray.html page:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Rays</title>
+    <style>
+        body {
+            background-color: #fff7e6;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            color: #f39c12;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        h1 {
+            font-size: 2.5em;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border: none;
+            background-color: #f39c12;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Buy Rays to Help Flowers Grow!</h1>
+        <button onclick="buyRay()">Buy Ray</button>
+    </div>
+
+    <script>
+        async function buyRay() {
+            try {
+                await purchaseRay(); // Call the smart contract's buyRay function
+                alert("Ray purchased! Check the flower page to see the growth.");
+            } catch (error) {
+                console.error("Error purchasing ray:", error);
+                alert("Error buying ray. Please try again.");
+            }
+        }
+
+        // Placeholder function for interacting with the blockchain
+        async function purchaseRay() {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => resolve("Ray purchased"), 1000); // Simulated blockchain call
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+Please update those two web pages so that they interact correctly with the data stored in the two smart contracts. include the following:
+
+Use ethers.js v6.7. Import the library from this src: https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js
+When initializing the provider, do the following: provider = new ethers.BrowserProvider(window.ethereum);
+When initializing the signer, do the following: signer = await provider.getSigner();

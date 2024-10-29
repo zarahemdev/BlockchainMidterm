@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Flower Garden</title>
+    <style>
+        body {
+            background-color: #f8f0e6;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            color: #4b5320;
+            position: relative;
+        }
+        .container {
+            margin-top: 50px;
+            position: relative;
+            width: 100%;
+            height: 500px;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        .flower {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Global Flower Garden</h1>
+        <div id="flowerContainer"></div> <!-- This div will hold the dynamically created flower images -->
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script>
+        const flowerContractAddress = '0x25e9A831645C22244bf4CA6faBbe9bBccaf6b626'; // Flower contract address
+
+        // Initialize ethers.js provider and signer
+        async function initEthers() {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            return new ethers.Contract(flowerContractAddress, flowerAbi, signer);
+        }
+
+        // ABI for Flower contract
+        const flowerAbi = [
+            "function totalFlowersGrown() public view returns (uint256)",
+            "function flowers(uint256) public view returns (uint256 x, uint256 y)"
+        ];
+
+        // Function to display all grown flowers based on their x and y coordinates
+        async function displayGrownFlowers() {
+            const flowerContract = await initEthers();
+            const totalFlowers = await flowerContract.totalFlowersGrown(); // Get total number of flowers grown
+
+            const flowerContainer = document.getElementById('flowerContainer');
+
+            for (let i = 1; i <= totalFlowers; i++) {
+                const { x, y } = await flowerContract.flowers(i); // Fetch flower details (x, y)
+
+                // Create a new flower element
+                const flower = document.createElement('img');
+                flower.src = 'FlowerPhaseThree.PNG'; // Assume fully grown flower (can be dynamic)
+                flower.className = 'flower';
+
+                // Use x and y values to position the flower in the container
+                flower.style.left = `${x}%`;
+                flower.style.top = `${y}%`;
+
+                flowerContainer.appendChild(flower); // Add flower to the container
+            }
+        }
+
+        // Load and display all flowers on page load
+        window.onload = async () => {
+            await displayGrownFlowers();
+        };
+    </script>
+</body>
+</html>
